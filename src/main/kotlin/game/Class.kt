@@ -1,5 +1,7 @@
 package com.godker.game
 
+const val TOTAL_CLASSES = 12
+
 //AO Classes are 1-based
 enum class Class(val id: Int, val title: String) {
     MAGE(1, "Mago"),

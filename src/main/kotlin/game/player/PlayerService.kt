@@ -92,9 +92,28 @@ class PlayerService(
         stats.elu = 300
         stats.elv = 1
 
+        val playerInventory = Inventory(30)
 
-        val inventory = Inventory(30)
-        inventory.add(InventoryObject(857, 200))
+        //Newbie red potion
+        playerInventory.add(InventoryObject(857, 200))
+
+        if (stats.maxMAN > 0 || archetype == Class.PALADIN){
+            //Newbie mana potion
+            playerInventory.add(InventoryObject(856, 200))
+        }else{
+            //Newbie dexterity potions
+            playerInventory.add(InventoryObject(855, 100))
+            //Newbie strength potions
+            playerInventory.add(InventoryObject(858, 50))
+        }
+
+        //Clothes
+        val clothes = when(race) {
+            Race.HUMAN -> playerInventory.add(InventoryObject(463, 1, true))
+            Race.ELF -> playerInventory.add(InventoryObject(464, 1, true))
+            Race.DROW -> playerInventory.add(InventoryObject(465, 1, true))
+            Race.DWARF, Race.GNOME -> playerInventory.add(InventoryObject(466, 1, true))
+        }
 
         val player = Player(
             0/*TODO: ID*/, name, mail,
@@ -104,7 +123,7 @@ class PlayerService(
             counters = counters,
             flags = flags,
             stats = stats,
-            inventory = inventory
+            inventory = playerInventory
         )
 
         repository.save(player)

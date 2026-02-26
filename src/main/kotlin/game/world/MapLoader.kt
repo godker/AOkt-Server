@@ -1,17 +1,11 @@
 package com.godker.game.world
 
-import java.io.DataInputStream
-import java.io.FileInputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.experimental.and
-import kotlin.math.floor
-
-private val MAP_REGEX = Regex("""Mapa(\d+).map""")
 
 object MapLoader {
     fun loadAll(path: Path): Map<Int, MapData> {
@@ -37,7 +31,7 @@ object MapLoader {
         Files.list(directory).use { stream ->
             stream.forEach { path ->
                 val fileName = path.fileName.toString()
-                val match = MAP_REGEX.matchEntire(fileName)
+                val match = Regex("""Mapa(\d+).map""").matchEntire(fileName)
 
                 if (match != null) {
                     val mapNumber = match.groupValues[1].toInt()
@@ -65,9 +59,9 @@ object MapLoader {
 
         val mapBuffer = mapFile("$path/Mapa$id.map")
         val infBuffer = mapFile("$path/Mapa$id.inf")
-        //dat
+        //TODO: dat
 
-        val mapData = runCatching {
+        val mapData = run {
             MapData().apply {
                 mapVersion = mapBuffer.getShort().toInt()
 
@@ -90,11 +84,12 @@ object MapLoader {
 
                     flag = infBuffer.get().toInt()
 
-                    if((flag and 1) != 0) {
+                    if ((flag and 1) != 0) {
                         exitTo[i] = Triple(
                             infBuffer.getShort().toInt(), //Map
                             infBuffer.getShort().toInt(), //X
-                            infBuffer.getShort().toInt()) //Y
+                            infBuffer.getShort().toInt()
+                        ) //Y
                     }
 
                     if ((flag and 2) != 0) {
@@ -112,7 +107,7 @@ object MapLoader {
                     }
                 }
             }
-        }.getOrThrow()
+        }
 
         return mapData
     }

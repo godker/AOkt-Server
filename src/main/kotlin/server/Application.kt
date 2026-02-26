@@ -1,6 +1,9 @@
 package com.godker.server
 
 import com.godker.connection.SessionRegistry
+import com.godker.game.objects.Object
+import com.godker.game.objects.ObjectLoader
+import com.godker.game.objects.ObjectRegistry
 import com.godker.game.player.PlayerService
 import com.godker.game.player.loader.CharFilePlayerRepository
 import com.godker.game.world.MapLoader
@@ -21,6 +24,11 @@ fun main(args: Array<String>) {
 
     val sessionRegistry = SessionRegistry()
 
+    println("Loading Objects...")
+    val objectRegistry = ObjectRegistry(
+        ObjectLoader.load(Paths.get("dats/")) as Map<Int, Object>)
+    println("Ok!")
+
     println("Loading Maps...")
     val mapData = MapLoader.loadAll(Paths.get("maps/"))
     val worldActor = WorldActor(mapData, sessionRegistry, serverScope)
@@ -33,7 +41,7 @@ fun main(args: Array<String>) {
     val playerService = PlayerService(playerRepository, worldActor)
     println("Ok!")
 
-    val context = ServerContext(playerService, worldActor, serverScope)
+    val context = ServerContext(playerService, worldActor,  objectRegistry, serverScope)
 
     val server = GameServer(7666, context, sessionRegistry)
 
