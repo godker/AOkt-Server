@@ -26,4 +26,6 @@ class CharFilePlayerRepository(private val basePath: Path) : PlayerRepository {
             Files.writeString(file, Json.encodeToString(player))
         }
     }
+
+    override suspend fun exists(name: String): Boolean = Files.exists(basePath.resolve("$name.chr"))
 }

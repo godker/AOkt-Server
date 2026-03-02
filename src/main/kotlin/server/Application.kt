@@ -1,5 +1,6 @@
 package com.godker.server
 
+import com.godker.connection.PlayerSessionFactory
 import com.godker.connection.SessionRegistry
 import com.godker.game.objects.Object
 import com.godker.game.objects.ObjectLoader
@@ -30,22 +31,29 @@ fun main(args: Array<String>) {
     println("Ok!")
 
     println("Loading Maps...")
-    val mapData = MapLoader.loadAll(Paths.get("maps/"))
-    val worldActor = WorldActor(mapData, sessionRegistry, serverScope)
+    val worldActor = WorldActor(
+        MapLoader.loadAll(Paths.get("maps/")),
+        serverScope)
     println("Ok!")
 
     println("Starting player service...")
         //TODO: could be DatabasePlayerRepository
-    val playerRepository = CharFilePlayerRepository(Paths.get("chars/"))
+    val playerService = PlayerService(
+        CharFilePlayerRepository(Paths.get("chars/")),
+        worldActor,
+        objectRegistry,
+        sessionRegistry)
 
-    val playerService = PlayerService(playerRepository, worldActor)
     println("Ok!")
 
-    val context = ServerContext(playerService, worldActor,  objectRegistry, serverScope)
+    val sessionFactory = PlayerSessionFactory(playerService, serverScope)
 
-    val server = GameServer(7666, context, sessionRegistry)
+    val server = GameServer(7666, sessionRegistry, sessionFactory)
 
     server.start()
+
+    //TODO: MAKE EVERYTHING GRACEFULLY ENDS
+    //serverScope.cancel etc
 }
 
 fun printLogo() {

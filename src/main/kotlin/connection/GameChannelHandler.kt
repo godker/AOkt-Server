@@ -1,24 +1,25 @@
 package com.godker.connection
 
-import com.godker.connection.packets.IncomingHandler
-import com.godker.server.ServerContext
+import com.godker.connection.packets.IncomingPacket
+import com.godker.connection.packets.QuitPacket
+import com.godker.game.player.PlayerService
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.util.AttributeKey
-import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 
 class GameChannelHandler(
-    private val serverContext: ServerContext,
-    private val sessionRegistry: SessionRegistry
-) : SimpleChannelInboundHandler<Pair<Int, ByteBuf>>() {
+    private val sessionRegistry: SessionRegistry,
+    private val sessionFactory: PlayerSessionFactory
+) : SimpleChannelInboundHandler<IncomingPacket>() {
 
     val SESSION_KEY = AttributeKey.valueOf<PlayerSession>("session")
 
     override fun channelActive(ctx: ChannelHandlerContext) {
-        val sessionId = serverContext.sessionIdGenerator.incrementAndGet()
+        val session = sessionFactory.createSession(ctx.channel())
 
-        val session = PlayerSession(sessionId, ctx.channel(), serverContext)
+        sessionRegistry.registerSession(session)
         ctx.channel().attr(SESSION_KEY).set(session)
 
         println("Client connected: ${ctx.channel().remoteAddress()}")
@@ -26,29 +27,16 @@ class GameChannelHandler(
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val session = ctx.channel().attr(SESSION_KEY).get() ?: error("Session not connected")
-        val player = session.player
 
-        if (player != null) {
-            sessionRegistry.unregisterSession(player.id)
-            println("Client disconnected: ${player.id}")
-        }else{
-            print("Client disconnected before login.")
-        }
+        session.receive(QuitPacket)
 
-        session.disconnect()
+        println("Client disconnected: ${ctx.channel().remoteAddress()}")
     }
 
-    override fun channelRead0(ctx: ChannelHandlerContext, packet: Pair<Int, ByteBuf>) {
+    override fun channelRead0(ctx: ChannelHandlerContext, packet: IncomingPacket) {
         val session = ctx.channel().attr(SESSION_KEY).get() ?: error("Session not connected")
-        val (packetId, data) = packet
 
-        session.context.scope.launch {
-            try {
-                IncomingHandler.handle(packetId, session, data)
-            } finally {
-                data.release()
-            }
-        }
+        session.receive(packet)
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {

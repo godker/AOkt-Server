@@ -1,5 +1,6 @@
 package com.godker.connection.protocol
 
+//TODO: im not sure yet perhaps will change in the future
 import com.godker.connection.packets.OutgoingPacket
 import com.godker.connection.packets.ServerPackets
 import com.godker.game.Class

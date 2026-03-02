@@ -1,26 +1,65 @@
 package com.godker.connection
 
 import com.godker.connection.packets.OutgoingPacket
+import com.godker.game.player.Player
+import com.godker.game.player.PlayerService
+import io.netty.channel.Channel
+import kotlinx.coroutines.CoroutineScope
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 class SessionRegistry {
+    data class SessionEntry(
+        val session: PlayerSession,
+        var playerId: Int? = null
+    )
 
-    //This binds the playerId and its playerSession
-    private val sessions = ConcurrentHashMap<Int, PlayerSession>()
+    //SessionId -> SessionEntry
+    private val sessions = ConcurrentHashMap<Long, SessionEntry>()
 
-    fun registerSession(playerId: Int, session: PlayerSession) {
-        sessions[playerId] = session
+    //PlayerId -> SessionId
+    private val playerToSession = ConcurrentHashMap<Int, Long>()
+
+    fun registerSession(session: PlayerSession){
+        sessions[session.sessionId] = SessionEntry(session)
     }
 
-    fun unregisterSession(playerId: Int) {
-        sessions.remove(playerId)
+    fun getSession(sessionId: Long) = sessions[sessionId]?.session
+
+    fun bindPlayer(sessionId: Long, playerId: Int) {
+        val entry = sessions[sessionId] ?: return
+        entry.playerId = playerId
+        playerToSession[playerId] = sessionId
+    }
+
+    fun unbindPlayer(sessionId: Long) {
+        val entry = sessions[sessionId] ?: return
+        val playerId = entry.playerId ?: return
+
+        playerToSession.remove(playerId)
+        entry.playerId = null
+    }
+
+    fun getSessionByPlayer(playerId: Int): PlayerSession? {
+        val sessionId = playerToSession[playerId] ?: return null
+        return sessions[sessionId]?.session
+    }
+
+    fun getPlayerBySession(sessionId: Long): Int? {
+        return sessions[sessionId]?.playerId
+    }
+
+    fun destroySession(sessionId: Long) {
+        val entry = sessions.remove(sessionId) ?: return
+
+        entry.session.disconnect()
+
+        entry.playerId?.let { playerId ->
+            playerToSession.remove(playerId)
+        }
     }
 
     fun send(playerId: Int, packet: OutgoingPacket) {
-        sessions[playerId]?.send(packet)
-    }
-
-    fun broadcast(packet: OutgoingPacket) {
-        sessions.values.forEach { it.send(packet) }
+        getSessionByPlayer(playerId)?.send(packet)
     }
 }

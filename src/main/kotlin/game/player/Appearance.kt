@@ -3,6 +3,7 @@ package com.godker.game.player
 import com.godker.game.Gender
 import com.godker.game.Heading
 import com.godker.game.Race
+import com.godker.game.objects.Object
 import kotlinx.serialization.Serializable
 
 //TODO: this is awful
@@ -33,14 +34,25 @@ data class Appearance(
     val charIndex: Int = 0, //TODO: no idea
     val head: Int = 0,
     val body: Int = 0,
-    val weapon: Int = 0,
-    val shield: Int = 0,
-    val helmet: Int = 0,
+    var weapon: Int = 0,
+    var shield: Int = 0,
+    var helmet: Int = 0,
     val fx: Int = 0,
     val loops: Int = 0,
     val heading: Heading = Heading.SOUTH,
 ){
     companion object {
+
+        //TODO: not sure if i like this
+        fun emptyShield(): Int = 2
+        fun emptyHelmet(): Int = 2
+
+        fun getWeaponAnimation(obj: Object, race: Race): Int {
+            return obj.dwarfsWeaponAnimation
+                ?.takeIf { race in listOf(Race.DWARF, Race.GNOME) }
+                ?: obj.weaponAnimation ?: 0
+        }
+
         fun default(race: Race, gender: Gender, head: Int): Appearance? {
             val (validHead, body) =
                 when (race) {
