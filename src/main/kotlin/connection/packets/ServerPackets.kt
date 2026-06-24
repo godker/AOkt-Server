@@ -83,7 +83,7 @@ enum class ServerPackets(val packetId: Int) {
     GUILDMEMBERINFO(79),
     GUILDDETAILS(80),            // CLANDET
     SHOWGUILDFUNDATIONFORM(81),  // SHOWFUN
-    PARALIZEOK(82),              // PARADOK
+    PARALYZEOK(82),              // PARADOK
     SHOWUSERREQUEST(83),         // PETICIO
     TRADEOK(84),                 // TRANSOK
     BANKOK(85),                  // BANCOOK

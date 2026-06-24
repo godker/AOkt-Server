@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 
 const val MAX_PETS: Int = 3
 
-@Serializable
 data class Player (
     var id: Int,
     val name: String,
@@ -16,7 +15,7 @@ data class Player (
     var char: Appearance,
     var origChar: Appearance,
     var description: String = "",
-    var descRM: String = "", //TODO: ??
+    var descRM: String = "", //TODO: para copiar desc, posiblemente no se use?
     val archetype: Class,
     val race: Race,
     val gender: Gender,
@@ -28,12 +27,12 @@ data class Player (
     val idConnection: Int = 0,
     val bankInventory: Inventory? = null,
     val crafting: Pair<Int, Int>? = null, //TODO: chequear cdo se implemente. Cantidad, Ciclo
-    val pets: IntArray = IntArray(MAX_PETS),
-    val petsType: IntArray = IntArray(MAX_PETS), //TODO: chequear cdo se implemente
-    var petCount: Int = 0, //TODO: counter?
+    val pets: ArrayList<Pets>? = null,
     val counters: Counters,
     val stats: Stats,
     val flags: Flags,
+
+    var privileges: PlayerType = PlayerType.USER,
 
     //TODO: reputation
     //TODO: factions

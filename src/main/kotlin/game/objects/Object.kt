@@ -1,6 +1,7 @@
 package com.godker.game.objects
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 enum class ObjectType (val id: Int){
@@ -118,4 +119,6 @@ data class Object (
     val noLog: Boolean? = null,
     val upgrade: Int? = null
     ){
+        @Transient
+        val saleValue:Int = (value ?: 0) / 3
 }

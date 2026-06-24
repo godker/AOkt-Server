@@ -30,19 +30,19 @@ class PacketDecoder : ByteToMessageDecoder() {
                 val password = buf.readVBString()
 
                 //TODO: version validation
-                data.readUnsignedByte()
-                data.readUnsignedByte()
-                data.readUnsignedByte()
+                buf.readUnsignedByte()
+                buf.readUnsignedByte()
+                buf.readUnsignedByte()
 
-                val userRace = data.readByte()
-                val userGender = data.readByte()
-                val userClass = data.readByte()
-                val userHead = data.readShort().toInt()
-                val userMail = data.readVBString()
+                val userRace = buf.readByte()
+                val userGender = buf.readByte()
+                val userClass = buf.readByte()
+                val userHead = buf.readShort()
+                val userMail = buf.readVBString()
 
-                val userHome = data.readByte()
+                val userHome = buf.readByte()
 
-                LoginCreatePacket(userName, password, userRace, userGender, userClass, userHead, userMail, userHome)
+                LoginCreatePacket(userName, password, userRace, userGender, userClass, userHead.toInt(), userMail, userHome)
             }
             else -> throw  IllegalArgumentException("Unknown packet id: $packetId")
         }

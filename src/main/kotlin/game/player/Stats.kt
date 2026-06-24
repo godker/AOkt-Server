@@ -9,8 +9,8 @@ const val MAX_SPELLS: Int = 35
 
 @Serializable
 class Stats(
-    var gold: Int = 0,
-    var bank: Int = 0,
+    var gold: Long = 0,
+    var bank: Long = 0,
 
     var maxHp: Int = 0,
     var minHp: Int = 0,
@@ -45,7 +45,6 @@ class Stats(
     @Deprecated("Esto es un counter?")
     var skillPoints: Int = 0,
 
-    @Deprecated("Esto es un stat")
     var expSkills: IntArray = IntArray(SKILLS_COUNT){0},
     var eluSkills: IntArray = IntArray(SKILLS_COUNT){0},
 

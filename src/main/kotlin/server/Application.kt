@@ -2,51 +2,78 @@ package com.godker.server
 
 import com.godker.connection.PlayerSessionFactory
 import com.godker.connection.SessionRegistry
+import com.godker.database.DatabaseFactory
 import com.godker.game.objects.Object
 import com.godker.game.objects.ObjectLoader
 import com.godker.game.objects.ObjectRegistry
 import com.godker.game.player.PlayerService
-import com.godker.game.player.loader.CharFilePlayerRepository
+import com.godker.game.player.loader.DatabasePlayerRepository
 import com.godker.game.world.MapLoader
 import com.godker.game.world.WorldActor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import org.slf4j.LoggerFactory
 import java.nio.file.Paths
+import java.util.TimeZone
 
 fun main(args: Array<String>) {
+    val logger = LoggerFactory.getLogger("Main")
 
-    printLogo()
     //TODO: for Debug
     System.setProperty("io.netty.leakDetection.level", "paranoid")
+
+    //JVM uses America/Buenos_Aires but that's invalid for postgres, so we set it manually here.
+    TimeZone.setDefault(
+        TimeZone.getTimeZone("America/Argentina/Buenos_Aires")
+    )
+
+    DatabaseFactory.init()
+
+    logger.info("Connecting database...")
+    var retries = 5
+
+    while(!DatabaseFactory.isConnected() && retries > 0) {
+        logger.warn("Database is not ready yet. Retrying in 3 seconds... ($retries left)")
+        Thread.sleep(3000)
+        retries--
+    }
+
+    if (!DatabaseFactory.isConnected()) {
+        logger.error("Couldn't connect to the databse. Server shutting down.")
+        //TODO: ??
+    }
+
+    logger.info("Database...Ok!")
 
     val serverScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val sessionRegistry = SessionRegistry()
 
-    println("Loading Objects...")
+    logger.info("Loading Objects...")
     val objectRegistry = ObjectRegistry(
         ObjectLoader.load(Paths.get("dats/")) as Map<Int, Object>)
-    println("Ok!")
+    logger.info("Objects...Ok!")
 
-    println("Loading Maps...")
+    logger.info("Loading Maps...")
     val worldActor = WorldActor(
         MapLoader.loadAll(Paths.get("maps/")),
         serverScope)
-    println("Ok!")
+    logger.info("Maps...Ok!")
 
-    println("Starting player service...")
-        //TODO: could be DatabasePlayerRepository
+    logger.info("Starting player service...")
     val playerService = PlayerService(
-        CharFilePlayerRepository(Paths.get("chars/")),
+        DatabasePlayerRepository(),
         worldActor,
         objectRegistry,
         sessionRegistry)
 
-    println("Ok!")
+    logger.info("Ok!")
 
     val sessionFactory = PlayerSessionFactory(playerService, serverScope)
+
+    printLogo()
 
     val server = GameServer(7666, sessionRegistry, sessionFactory)
 

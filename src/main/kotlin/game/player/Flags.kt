@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Flags(
-    var dead: Byte = 0, //¿Esta muerto?
+    var dead: Boolean = false, //¿Esta muerto?
     var trading: Boolean = false, //¿Esta comerciando?
     var logged: Boolean = false, //¿Esta online?
     var meditating: Boolean = false,
@@ -17,7 +17,7 @@ data class Flags(
     var timerLanzarSpell: Int = 0,
     var canWork: Byte = 0,
     var poisoned: Byte = 0,
-    var paralyzed: Byte = 0,
+    var paralyzed: Boolean = false,
     var immobilized: Byte = 0,
     var dumbness: Byte = 0,
     var blindness: Byte = 0,
@@ -72,8 +72,7 @@ data class Flags(
     var sendDenounces: Boolean = false,
 
     var statsChanged: Byte = 0,
-    var privileges: PlayerType = PlayerType.USER,
-    var specialPrivilege: Boolean = false,
+    //var specialPrivilege: Boolean = false,
 
     var lastKilledCriminal: String = "",
     var lastKilledCitizen: String = "",

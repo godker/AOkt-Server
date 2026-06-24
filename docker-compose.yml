@@ -1,0 +1,48 @@
+services:
+    postgres:
+        image: postgres:18
+        container_name: ao-server-db
+
+        environment:
+          PGTZ: "America/Argentina/Buenos_Aires"
+          TZ: "America/Argentina/Buenos_Aires"
+          POSTGRES_DB: ${DB_NAME}
+          POSTGRES_USER: ${DB_USER}
+          POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+        ports:
+           - "${DB_PORT}:5432"
+
+        volumes:
+          - postgres-data:/var/lib/postgresql
+          - ./database/:/docker-entrypoint-initdb.d
+
+        restart: unless-stopped
+
+    ao-server:
+        build: .
+        container_name: ao-server
+
+        depends_on:
+          - postgres
+
+        environment:
+          DB_HOST: ${DB_HOST}
+          DB_PORT: ${DB_PORT}
+          DB_USER: ${DB_USER}
+          DB_PASSWORD: ${DB_PASSWORD}
+          DB_NAME: ${DB_NAME}
+
+        ports:
+          - "7666:7666"
+
+        volumes:
+          - ./build/libs:/app
+          - ./maps:/app/maps
+          - ./dats:/app/dats
+          - ./chars:/app/chars
+
+        restart: unless-stopped
+
+volumes:
+  postgres-data:

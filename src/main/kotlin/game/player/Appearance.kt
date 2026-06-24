@@ -37,7 +37,7 @@ data class Appearance(
     var weapon: Int = 0,
     var shield: Int = 0,
     var helmet: Int = 0,
-    val fx: Int = 0,
+    var fx: Int = 0,
     val loops: Int = 0,
     val heading: Heading = Heading.SOUTH,
 ){

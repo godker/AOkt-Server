@@ -1,14 +1,7 @@
 package com.godker.game.player
 
-import com.godker.connection.PlayerSession
 import com.godker.connection.SessionRegistry
-import com.godker.connection.packets.IncomingPacket
-import com.godker.connection.packets.LoginCreatePacket
-import com.godker.connection.packets.LoginPacket
-import com.godker.connection.packets.QuitPacket
-import com.godker.connection.packets.ThrowDicePacket
-import com.godker.connection.protocol.DiceRollPacket
-import com.godker.connection.protocol.LoggedPacket
+import com.godker.connection.packets.*
 import com.godker.game.City
 import com.godker.game.Class
 import com.godker.game.Gender
@@ -25,13 +18,35 @@ class PlayerService(
     private val objectRegistry: ObjectRegistry,
     private val sessionRegistry: SessionRegistry,
 ) {
-
     suspend fun login(name: String, password: String): Player? {
         val player = repository.loadPlayerByName(name) ?: return null
 
         //TODO: password check
 
-        world.registerPlayer(player)
+        player.apply {
+            flags.apply {
+                targetNpc = 0
+                targetNpcType = NpcType.COMMON
+                targetObj = 0
+                targetUser = 0
+                privileges = PlayerType.USER
+            }
+
+            //TODO: constants for empty shield, helmet, weapon
+            char.apply {
+                fx = 0
+                shield = if (inventory == null || inventory.shieldSlot == 0) 2 else shield
+                helmet = if (inventory == null || inventory.helmetSlot == 0) 2 else helmet
+                weapon = if (inventory == null || inventory.weaponSlot == 0) 2 else weapon
+            }
+
+            inventory?.bagSlot?.takeIf { it > 0 }?.let { slot ->
+                objectRegistry.getOrNull(slot)?.bagType?.let { type ->
+                    inventory.updateInventoryLimit(type)
+                }
+            }
+        }
+        //TODO:login validations
 
         return player
     }
@@ -49,7 +64,7 @@ class PlayerService(
 
         //TODO: return an object for error notification instead of nulls
         //TODO: more name validations?
-        if (name.isEmpty()) return null
+        if (name.isEmpty() || name.length > 15 || password.isEmpty() || mail.isEmpty()) return null
 
         if (repository.exists(name)) return null
 
@@ -176,7 +191,7 @@ class PlayerService(
             inventory = playerInventory
         )
 
-        repository.save(player)
+        repository.create(player, password, "0.0.0.0")
         //return player
         return login(name, password)
     }
@@ -193,10 +208,8 @@ class PlayerService(
 
     private suspend fun handleLogin(sessionId: Long, packet: LoginPacket) {
         //TODO something if failed
-        login(packet.name, packet.password)?.let { player ->
-            sessionRegistry.bindPlayer(sessionId, player.id)
-            sessionRegistry.send(player.id, LoggedPacket(player.archetype))
-        }
+        val player = login(packet.name, packet.password) ?: return //TODO: ?
+        completeLogin(sessionId, player)
     }
 
     private fun handleThrowDice(sessionId: Long) {
@@ -214,7 +227,7 @@ class PlayerService(
         session.pendingDiceThrowing[Attributes.CONSTITUTION.ordinal] = //Constitución
             16 + (0..1).random() + (0..1).random()
 
-        session.send(DiceRollPacket(session.pendingDiceThrowing))
+        session.send(DiceRoll(session.pendingDiceThrowing))
     }
 
     private suspend fun handleCreateNewUser(sessionId: Long, packet: LoginCreatePacket) {
@@ -224,7 +237,7 @@ class PlayerService(
 
         println("Creating a char named ${packet.name}")
 
-        create(
+        val player = create(
             packet.name, packet.password, packet.mail,
             Class of packet.archetype.toInt(),
             Race of packet.race.toInt(),
@@ -232,10 +245,32 @@ class PlayerService(
             City of packet.home.toInt(),
             packet.head,
             session.pendingDiceThrowing
-        )?.let { player ->
-            sessionRegistry.bindPlayer(sessionId, player.id)
-            sessionRegistry.send(player.id, LoggedPacket(player.archetype))
-        } ?: return //TODO: session.send(ErrorMsg)
+        ) ?: return //TODO: session.send(ErrorMsg)
+
+        completeLogin(sessionId, player)
+    }
+
+    private suspend fun completeLogin(sessionId: Long, player: Player) {
+        sessionRegistry.bindPlayer(sessionId, player.id)
+        
+        updateUserInventory(player)
+        updateUserSpells(player)
+
+        player.flags.resurrectionLock = !player.flags.dead
+        val msgType = if (player.flags.resurrectionLock)
+            MessageType.RESUSCITATION_SAFE_ON
+        else
+            MessageType.RESUSCITATION_SAFE_OFF
+
+        sessionRegistry.send(player.id, SendMultiMessage(msgType))
+
+        if (player.flags.paralyzed)
+            sessionRegistry.send(player.id, ParalyzeOk())
+
+        //Seguir por If mapa = 0 Then
+        world.registerPlayer(player)
+
+        sessionRegistry.send(player.id, LoggedOk(player.archetype))
     }
 
     private suspend fun handleLogout(sessionId: Long) {
@@ -250,5 +285,32 @@ class PlayerService(
         }
 
         sessionRegistry.unbindPlayer(sessionId)
+    }
+
+    private fun updateUserInventory(player: Player, slot: Int = -1) {
+        val inventory = player.inventory ?: return
+
+        if (slot == -1) {
+            inventory.getAll().forEachIndexed { index, `object` ->
+                val objInfo = objectRegistry.getOrNull(`object`.objId) ?: return@forEachIndexed
+                sessionRegistry.send(player.id, InventoryUpdate(player.id, `object`, index, objInfo))
+            }
+        }else{
+            inventory.get(slot).let {
+                val objInfo = objectRegistry.getOrNull(it.objId) ?: return
+                sessionRegistry.send(player.id, InventoryUpdate(player.id, it, slot, objInfo))
+            }
+        }
+    }
+    
+    private fun updateUserSpells(player: Player, slot: Int = -1) {
+        val spells = player.stats.userSpells
+        
+        if (slot == -1) {
+            spells.forEachIndexed { index, spell ->
+                //TODO: spells names (spells loading)
+                sessionRegistry.send(player.id, SpellListUpdate(player.id, spell, index, "(None)"))
+            }
+        } else sessionRegistry.send(player.id, SpellListUpdate(player.id, spells[slot], slot, "(None)"))
     }
 }
